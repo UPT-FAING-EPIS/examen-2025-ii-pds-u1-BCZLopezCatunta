@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "CN/3zK/7UMeF6wkc77PLx3SWdoFH7xyKYwlmz/lRh6I=",
+  "Source": "ExamSystem.API",
+  "BasePath": "_content/ExamSystem.API",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}
