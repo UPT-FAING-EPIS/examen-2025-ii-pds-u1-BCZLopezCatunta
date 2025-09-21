@@ -1,0 +1,665 @@
+name: Generate Class Diagram
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'backend/**', 'frontend/**' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'backend/**', 'frontend/**' ]
+  workflow_dispatch:
+
+jobs:
+  generate-class-diagram:
+    name: Generate Class Diagram
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Install PlantUML
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y plantuml graphviz
+
+    - name: Generate Backend Class Diagram
+      run: |
+        cat > backend-class-diagram.puml << 'EOF'
+        @startuml Backend Class Diagram
+        
+        !theme plain
+        skinparam backgroundColor #FFFFFF
+        skinparam class {
+          BackgroundColor #E1F5FE
+          BorderColor #01579B
+          ArrowColor #01579B
+        }
+        
+        package "Models" {
+          class User {
+            +int Id
+            +string FirstName
+            +string LastName
+            +string Email
+            +string Role
+            +DateTime CreatedAt
+            +DateTime? UpdatedAt
+            +ICollection<Exam> CreatedExams
+            +ICollection<ExamAttempt> ExamAttempts
+          }
+          
+          class Exam {
+            +int Id
+            +string Title
+            +string? Description
+            +int DurationMinutes
+            +DateTime StartTime
+            +DateTime EndTime
+            +bool IsActive
+            +DateTime CreatedAt
+            +DateTime? UpdatedAt
+            +int CreatedByUserId
+            +User CreatedByUser
+            +ICollection<Question> Questions
+            +ICollection<ExamAttempt> ExamAttempts
+          }
+          
+          class Question {
+            +int Id
+            +string Text
+            +string Type
+            +int Points
+            +int Order
+            +DateTime CreatedAt
+            +DateTime? UpdatedAt
+            +int ExamId
+            +Exam Exam
+            +ICollection<QuestionOption> Options
+            +ICollection<Answer> Answers
+          }
+          
+          class QuestionOption {
+            +int Id
+            +string Text
+            +bool IsCorrect
+            +int Order
+            +int QuestionId
+            +Question Question
+          }
+          
+          class ExamAttempt {
+            +int Id
+            +DateTime StartedAt
+            +DateTime? CompletedAt
+            +int? Score
+            +int? TotalPoints
+            +string Status
+            +int UserId
+            +User User
+            +int ExamId
+            +Exam Exam
+            +ICollection<Answer> Answers
+          }
+          
+          class Answer {
+            +int Id
+            +string? TextAnswer
+            +int? SelectedOptionId
+            +bool? BooleanAnswer
+            +int PointsEarned
+            +DateTime AnsweredAt
+            +int ExamAttemptId
+            +ExamAttempt ExamAttempt
+            +int QuestionId
+            +Question Question
+            +QuestionOption? SelectedOption
+          }
+        }
+        
+        package "Data" {
+          class ExamSystemDbContext {
+            +DbSet<User> Users
+            +DbSet<Exam> Exams
+            +DbSet<Question> Questions
+            +DbSet<QuestionOption> QuestionOptions
+            +DbSet<ExamAttempt> ExamAttempts
+            +DbSet<Answer> Answers
+            +OnModelCreating(ModelBuilder)
+          }
+        }
+        
+        package "Services" {
+          interface IExamService {
+            +GetAllExamsAsync()
+            +GetExamByIdAsync(int)
+            +CreateExamAsync(CreateExamDto, int)
+            +UpdateExamAsync(int, UpdateExamDto, int)
+            +DeleteExamAsync(int, int)
+            +GetExamsByUserAsync(int)
+            +GetExamForStudentAsync(int, int)
+          }
+          
+          class ExamService {
+            -ExamSystemDbContext _context
+            +ExamService(ExamSystemDbContext)
+            +GetAllExamsAsync()
+            +GetExamByIdAsync(int)
+            +CreateExamAsync(CreateExamDto, int)
+            +UpdateExamAsync(int, UpdateExamDto, int)
+            +DeleteExamAsync(int, int)
+            +GetExamsByUserAsync(int)
+            +GetExamForStudentAsync(int, int)
+            -MapToExamDto(Exam)
+          }
+          
+          interface IExamAttemptService {
+            +StartExamAttemptAsync(StartExamAttemptDto, int)
+            +GetExamAttemptAsync(int, int)
+            +SubmitAnswerAsync(int, SubmitAnswerDto, int)
+            +CompleteExamAttemptAsync(int, int)
+            +GetUserExamAttemptsAsync(int)
+            +GetExamResultsAsync(int, int)
+          }
+          
+          class ExamAttemptService {
+            -ExamSystemDbContext _context
+            +ExamAttemptService(ExamSystemDbContext)
+            +StartExamAttemptAsync(StartExamAttemptDto, int)
+            +GetExamAttemptAsync(int, int)
+            +SubmitAnswerAsync(int, SubmitAnswerDto, int)
+            +CompleteExamAttemptAsync(int, int)
+            +GetUserExamAttemptsAsync(int)
+            +GetExamResultsAsync(int, int)
+            -CalculateAnswerScore(Answer)
+            -MapToExamAttemptDto(ExamAttempt)
+          }
+        }
+        
+        package "Controllers" {
+          class ExamsController {
+            -IExamService _examService
+            +ExamsController(IExamService)
+            +GetExams()
+            +GetExam(int)
+            +CreateExam(CreateExamDto)
+            +UpdateExam(int, UpdateExamDto)
+            +DeleteExam(int)
+            +GetExamsByUser(int)
+            +GetExamForStudent(int)
+          }
+          
+          class ExamAttemptsController {
+            -IExamAttemptService _examAttemptService
+            +ExamAttemptsController(IExamAttemptService)
+            +StartExamAttempt(StartExamAttemptDto)
+            +GetExamAttempt(int)
+            +SubmitAnswer(int, SubmitAnswerDto)
+            +CompleteExamAttempt(int)
+            +GetUserExamAttempts(int)
+            +GetExamResults(int)
+          }
+        }
+        
+        ' Relationships
+        User ||--o{ Exam : creates
+        User ||--o{ ExamAttempt : attempts
+        Exam ||--o{ Question : contains
+        Exam ||--o{ ExamAttempt : has
+        Question ||--o{ QuestionOption : has
+        Question ||--o{ Answer : answered_by
+        ExamAttempt ||--o{ Answer : contains
+        QuestionOption ||--o{ Answer : selected_in
+        
+        ExamService ..> IExamService : implements
+        ExamAttemptService ..> IExamAttemptService : implements
+        ExamService --> ExamSystemDbContext : uses
+        ExamAttemptService --> ExamSystemDbContext : uses
+        ExamsController --> IExamService : uses
+        ExamAttemptsController --> IExamAttemptService : uses
+        
+        @enduml
+        EOF
+
+    - name: Generate Frontend Class Diagram
+      run: |
+        cat > frontend-class-diagram.puml << 'EOF'
+        @startuml Frontend Class Diagram
+        
+        !theme plain
+        skinparam backgroundColor #FFFFFF
+        skinparam class {
+          BackgroundColor #F3E5F5
+          BorderColor #4A148C
+          ArrowColor #4A148C
+        }
+        
+        package "Types" {
+          interface Exam {
+            +number id
+            +string title
+            +string? description
+            +number durationMinutes
+            +string startTime
+            +string endTime
+            +boolean isActive
+            +string createdAt
+            +number createdByUserId
+            +string createdByUserName
+            +Question[] questions
+          }
+          
+          interface Question {
+            +number id
+            +string text
+            +string type
+            +number points
+            +number order
+            +QuestionOption[] options
+          }
+          
+          interface QuestionOption {
+            +number id
+            +string text
+            +boolean isCorrect
+            +number order
+          }
+          
+          interface ExamAttempt {
+            +number id
+            +string startedAt
+            +string? completedAt
+            +number? score
+            +number? totalPoints
+            +string status
+            +number userId
+            +string userName
+            +number examId
+            +string examTitle
+            +Answer[] answers
+          }
+          
+          interface Answer {
+            +number id
+            +string? textAnswer
+            +number? selectedOptionId
+            +boolean? booleanAnswer
+            +number pointsEarned
+            +string answeredAt
+            +number questionId
+            +string questionText
+            +string? selectedOptionText
+          }
+        }
+        
+        package "Services" {
+          class ApiService {
+            -string baseURL
+            +getAllExams()
+            +getExamById(number)
+            +createExam(CreateExamRequest)
+            +updateExam(number, Partial<CreateExamRequest>)
+            +deleteExam(number)
+            +getExamsByUser(number)
+            +getExamForStudent(number)
+          }
+          
+          class ExamAttemptService {
+            -string baseURL
+            +startExamAttempt(StartExamAttemptRequest)
+            +getExamAttempt(number)
+            +submitAnswer(number, SubmitAnswerRequest)
+            +completeExamAttempt(number)
+            +getUserExamAttempts(number)
+            +getExamResults(number)
+          }
+        }
+        
+        package "Components" {
+          class Navbar {
+            +navigate: NavigateFunction
+            +location: Location
+            +isActive(string)
+          }
+          
+          class Home {
+            +navigate: NavigateFunction
+          }
+          
+          class StudentDashboard {
+            +exams: Exam[]
+            +loading: boolean
+            +error: string | null
+            +loadExams()
+            +getExamStatus(Exam)
+            +formatDate(string)
+            +handleStartExam(number)
+          }
+          
+          class TeacherDashboard {
+            +exams: Exam[]
+            +loading: boolean
+            +error: string | null
+            +loadExams()
+            +getExamStatus(Exam)
+            +formatDate(string)
+            +handleCreateExam()
+            +handleViewResults(number)
+            +handleEditExam(number)
+          }
+          
+          class ExamPage {
+            +exam: Exam | null
+            +attempt: ExamAttempt | null
+            +currentQuestionIndex: number
+            +timeLeft: number
+            +loading: boolean
+            +error: string | null
+            +answers: { [questionId: number]: any }
+            +loadExam()
+            +handleAnswerChange(number, any)
+            +handleSubmitAnswer(number)
+            +handleSubmitExam()
+            +formatTime(number)
+            +getProgress()
+            +renderQuestion(Question)
+          }
+          
+          class CreateExam {
+            +exam: CreateExamRequest
+            +loading: boolean
+            +handleExamChange(keyof CreateExamRequest, any)
+            +addQuestion()
+            +updateQuestion(number, keyof CreateQuestionRequest, any)
+            +deleteQuestion(number)
+            +addOption(number)
+            +updateOption(number, number, keyof CreateQuestionOptionRequest, any)
+            +deleteOption(number, number)
+            +handleSubmit()
+            +isFormValid()
+          }
+          
+          class ExamResults {
+            +attempts: ExamAttempt[]
+            +loading: boolean
+            +error: string | null
+            +loadResults()
+            +getStatusColor(string)
+            +getStatusText(string)
+            +formatDate(string)
+            +calculateAverageScore()
+            +getCompletionRate()
+          }
+        }
+        
+        package "Pages" {
+          class Home
+          class StudentDashboard
+          class TeacherDashboard
+          class ExamPage
+          class CreateExam
+          class ExamResults
+        }
+        
+        ' Relationships
+        StudentDashboard --> ApiService : uses
+        TeacherDashboard --> ApiService : uses
+        ExamPage --> ApiService : uses
+        ExamPage --> ExamAttemptService : uses
+        CreateExam --> ApiService : uses
+        ExamResults --> ExamAttemptService : uses
+        
+        ApiService --> Exam : returns
+        ExamAttemptService --> ExamAttempt : returns
+        
+        @enduml
+        EOF
+
+    - name: Generate Combined Class Diagram
+      run: |
+        cat > combined-class-diagram.puml << 'EOF'
+        @startuml Combined System Architecture
+        
+        !theme plain
+        skinparam backgroundColor #FFFFFF
+        skinparam package {
+          BackgroundColor #E8F5E8
+          BorderColor #2E7D32
+        }
+        
+        package "Frontend (React)" {
+          package "Components" {
+            class Navbar
+            class Home
+            class StudentDashboard
+            class TeacherDashboard
+            class ExamPage
+            class CreateExam
+            class ExamResults
+          }
+          
+          package "Services" {
+            class ApiService
+            class ExamAttemptService
+          }
+          
+          package "Types" {
+            class Exam
+            class Question
+            class QuestionOption
+            class ExamAttempt
+            class Answer
+          }
+        }
+        
+        package "Backend (.NET Core)" {
+          package "Controllers" {
+            class ExamsController
+            class ExamAttemptsController
+          }
+          
+          package "Services" {
+            class ExamService
+            class ExamAttemptService
+          }
+          
+          package "Models" {
+            class User
+            class Exam
+            class Question
+            class QuestionOption
+            class ExamAttempt
+            class Answer
+          }
+          
+          package "Data" {
+            class ExamSystemDbContext
+          }
+        }
+        
+        package "Database (SQL Server)" {
+          class Users
+          class Exams
+          class Questions
+          class QuestionOptions
+          class ExamAttempts
+          class Answers
+        }
+        
+        package "Infrastructure (Azure)" {
+          class AppService
+          class SQLServer
+          class StorageAccount
+          class ContainerRegistry
+        }
+        
+        ' Frontend to Backend
+        ApiService --> ExamsController : HTTP API
+        ExamAttemptService --> ExamAttemptsController : HTTP API
+        
+        ' Backend to Database
+        ExamService --> ExamSystemDbContext : uses
+        ExamAttemptService --> ExamSystemDbContext : uses
+        ExamSystemDbContext --> Users : maps to
+        ExamSystemDbContext --> Exams : maps to
+        ExamSystemDbContext --> Questions : maps to
+        ExamSystemDbContext --> QuestionOptions : maps to
+        ExamSystemDbContext --> ExamAttempts : maps to
+        ExamSystemDbContext --> Answers : maps to
+        
+        ' Infrastructure
+        ExamsController --> AppService : deployed on
+        ExamAttemptsController --> AppService : deployed on
+        ExamSystemDbContext --> SQLServer : connects to
+        SQLServer --> Users : stores
+        SQLServer --> Exams : stores
+        SQLServer --> Questions : stores
+        SQLServer --> QuestionOptions : stores
+        SQLServer --> ExamAttempts : stores
+        SQLServer --> Answers : stores
+        
+        @enduml
+        EOF
+
+    - name: Convert PlantUML to Images
+      run: |
+        plantuml -tpng backend-class-diagram.puml
+        plantuml -tpng frontend-class-diagram.puml
+        plantuml -tpng combined-class-diagram.puml
+
+    - name: Create Documentation
+      run: |
+        cat > class-diagram-documentation.md << 'EOF'
+        # Class Diagram Documentation
+        
+        ## Backend Architecture
+        
+        The backend follows a clean architecture pattern with clear separation of concerns:
+        
+        ### Models Layer
+        - **User**: Represents system users (students and teachers)
+        - **Exam**: Represents an examination with questions and time constraints
+        - **Question**: Individual questions within an exam
+        - **QuestionOption**: Answer options for multiple choice questions
+        - **ExamAttempt**: Student's attempt at an exam
+        - **Answer**: Student's answer to a specific question
+        
+        ### Data Layer
+        - **ExamSystemDbContext**: Entity Framework context managing database operations
+        
+        ### Services Layer
+        - **IExamService/ExamService**: Business logic for exam management
+        - **IExamAttemptService/ExamAttemptService**: Business logic for exam attempts
+        
+        ### Controllers Layer
+        - **ExamsController**: REST API endpoints for exam operations
+        - **ExamAttemptsController**: REST API endpoints for exam attempt operations
+        
+        ## Frontend Architecture
+        
+        The frontend follows React best practices with TypeScript:
+        
+        ### Types Layer
+        - TypeScript interfaces defining data structures
+        - Ensures type safety across the application
+        
+        ### Services Layer
+        - **ApiService**: HTTP client for backend communication
+        - **ExamAttemptService**: Specialized service for exam attempts
+        
+        ### Components Layer
+        - **Navbar**: Navigation component
+        - **Home**: Landing page
+        - **StudentDashboard**: Student interface
+        - **TeacherDashboard**: Teacher interface
+        - **ExamPage**: Exam taking interface
+        - **CreateExam**: Exam creation interface
+        - **ExamResults**: Results viewing interface
+        
+        ## System Integration
+        
+        ### API Communication
+        - Frontend services communicate with backend controllers via HTTP
+        - RESTful API design with clear endpoint structure
+        - JSON data exchange format
+        
+        ### Database Integration
+        - Entity Framework ORM for database operations
+        - Code-first approach with migrations
+        - SQL Server as the database engine
+        
+        ### Infrastructure Deployment
+        - Azure App Service for hosting
+        - Azure SQL Server for database
+        - Container Registry for Docker images
+        - Storage Account for file storage
+        
+        ## Design Patterns Used
+        
+        ### Repository Pattern
+        - Entity Framework DbContext acts as repository
+        - Services encapsulate business logic
+        
+        ### Dependency Injection
+        - Services injected into controllers
+        - Promotes testability and loose coupling
+        
+        ### DTO Pattern
+        - Data Transfer Objects for API communication
+        - Separates internal models from external contracts
+        
+        ### Observer Pattern
+        - React state management
+        - Component re-rendering on state changes
+        
+        ## Security Considerations
+        
+        - Input validation on both frontend and backend
+        - SQL injection prevention through Entity Framework
+        - CORS configuration for cross-origin requests
+        - Authentication and authorization (to be implemented)
+        
+        ## Scalability Considerations
+        
+        - Stateless backend design
+        - Database connection pooling
+        - Caching strategies for frequently accessed data
+        - Horizontal scaling capabilities with Azure App Service
+        
+        ## Testing Strategy
+        
+        - Unit tests for business logic
+        - Integration tests for API endpoints
+        - Frontend component testing
+        - End-to-end testing for critical user flows
+        EOF
+
+    - name: Upload Class Diagrams
+      uses: actions/upload-artifact@v4
+      with:
+        name: class-diagrams
+        path: |
+          backend-class-diagram.png
+          frontend-class-diagram.png
+          combined-class-diagram.png
+          class-diagram-documentation.md
+
+    - name: Comment PR with Class Diagram
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const documentation = fs.readFileSync('class-diagram-documentation.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## Class Diagram Documentation\n\n${documentation}`
+          });

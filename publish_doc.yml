@@ -1,0 +1,956 @@
+name: Publish Documentation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  publish-docs:
+    name: Publish Documentation to GitHub Pages
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Install dependencies
+      run: |
+        npm install -g @mermaid-js/mermaid-cli
+        npm install -g markdown-it
+        npm install -g markdown-it-attrs
+
+    - name: Generate Documentation
+      run: |
+        mkdir -p docs/_site
+        
+        # Create main documentation
+        cat > docs/_site/index.md << 'EOF'
+        # Sistema de Exámenes en Línea
+        
+        ## Descripción
+        Sistema completo de gestión de exámenes en línea desarrollado con .NET Core, React y Azure.
+        
+        ## Características Principales
+        
+        - **Panel de Estudiante**: Interfaz para rendir exámenes con temporizador
+        - **Panel de Docente**: Herramientas para crear y gestionar exámenes
+        - **API REST**: Backend robusto con .NET Core
+        - **Base de Datos**: SQL Server con Entity Framework
+        - **Frontend Moderno**: React con TypeScript y Material-UI
+        - **Infraestructura**: Desplegada en Azure con Terraform
+        - **CI/CD**: Automatización con GitHub Actions
+        
+        ## Arquitectura del Sistema
+        
+        ```mermaid
+        graph TB
+            subgraph "Frontend"
+                A[React App]
+                B[Material-UI]
+                C[TypeScript]
+            end
+            
+            subgraph "Backend"
+                D[.NET Core API]
+                E[Entity Framework]
+                F[SQL Server]
+            end
+            
+            subgraph "Infrastructure"
+                G[Azure App Service]
+                H[Azure SQL Database]
+                I[Azure Storage]
+            end
+            
+            A --> D
+            D --> E
+            E --> F
+            D --> G
+            F --> H
+        ```
+        
+        ## Tecnologías Utilizadas
+        
+        ### Backend
+        - .NET Core 9.0
+        - Entity Framework Core
+        - SQL Server
+        - ASP.NET Core Web API
+        - Swagger/OpenAPI
+        
+        ### Frontend
+        - React 18
+        - TypeScript
+        - Material-UI
+        - React Router
+        - Axios
+        
+        ### Infrastructure
+        - Azure App Service
+        - Azure SQL Database
+        - Azure Storage Account
+        - Terraform
+        - GitHub Actions
+        
+        ## Instalación y Configuración
+        
+        ### Requisitos Previos
+        - .NET 9.0 SDK
+        - Node.js 18+
+        - SQL Server
+        - Azure CLI
+        - Terraform
+        
+        ### Backend
+        ```bash
+        cd backend/ExamSystem.API
+        dotnet restore
+        dotnet build
+        dotnet run
+        ```
+        
+        ### Frontend
+        ```bash
+        cd frontend/exam-system-frontend
+        npm install
+        npm start
+        ```
+        
+        ### Infrastructure
+        ```bash
+        cd infrastructure
+        terraform init
+        terraform plan
+        terraform apply
+        ```
+        
+        ## API Endpoints
+        
+        ### Exámenes
+        - `GET /api/exams` - Obtener todos los exámenes
+        - `GET /api/exams/{id}` - Obtener examen por ID
+        - `POST /api/exams` - Crear nuevo examen
+        - `PUT /api/exams/{id}` - Actualizar examen
+        - `DELETE /api/exams/{id}` - Eliminar examen
+        
+        ### Intentos de Examen
+        - `POST /api/examattempts/start` - Iniciar intento
+        - `GET /api/examattempts/{id}` - Obtener intento
+        - `POST /api/examattempts/{id}/answer` - Enviar respuesta
+        - `POST /api/examattempts/{id}/complete` - Finalizar intento
+        
+        ## Base de Datos
+        
+        ### Entidades Principales
+        - **Users**: Usuarios del sistema
+        - **Exams**: Exámenes creados
+        - **Questions**: Preguntas de los exámenes
+        - **QuestionOptions**: Opciones de respuesta
+        - **ExamAttempts**: Intentos de examen
+        - **Answers**: Respuestas de los estudiantes
+        
+        ## Seguridad
+        
+        - Validación de entrada en frontend y backend
+        - Prevención de inyección SQL con Entity Framework
+        - Configuración CORS para solicitudes cross-origin
+        - Autenticación y autorización (pendiente de implementar)
+        
+        ## Monitoreo y Logging
+        
+        - Azure Application Insights
+        - Logs estructurados con Serilog
+        - Métricas de rendimiento
+        - Alertas automáticas
+        
+        ## Contribución
+        
+        1. Fork del repositorio
+        2. Crear rama de feature
+        3. Realizar cambios
+        4. Ejecutar pruebas
+        5. Crear Pull Request
+        
+        ## Licencia
+        
+        Este proyecto está bajo la Licencia MIT.
+        EOF
+
+        # Create API documentation
+        cat > docs/_site/api.md << 'EOF'
+        # API Documentation
+        
+        ## Base URL
+        ```
+        https://your-app.azurewebsites.net/api
+        ```
+        
+        ## Authentication
+        Currently, the API uses hardcoded user IDs for development. In production, implement proper JWT authentication.
+        
+        ## Endpoints
+        
+        ### Exams
+        
+        #### Get All Exams
+        ```http
+        GET /api/exams
+        ```
+        
+        **Response:**
+        ```json
+        [
+          {
+            "id": 1,
+            "title": "Math Exam",
+            "description": "Basic mathematics test",
+            "durationMinutes": 60,
+            "startTime": "2024-01-01T10:00:00Z",
+            "endTime": "2024-01-01T12:00:00Z",
+            "isActive": true,
+            "createdAt": "2024-01-01T09:00:00Z",
+            "createdByUserId": 1,
+            "createdByUserName": "John Teacher",
+            "questions": [...]
+          }
+        ]
+        ```
+        
+        #### Get Exam by ID
+        ```http
+        GET /api/exams/{id}
+        ```
+        
+        #### Create Exam
+        ```http
+        POST /api/exams
+        Content-Type: application/json
+        
+        {
+          "title": "New Exam",
+          "description": "Exam description",
+          "durationMinutes": 90,
+          "startTime": "2024-01-01T10:00:00Z",
+          "endTime": "2024-01-01T12:00:00Z",
+          "questions": [
+            {
+              "text": "What is 2+2?",
+              "type": "MultipleChoice",
+              "points": 5,
+              "order": 1,
+              "options": [
+                {
+                  "text": "3",
+                  "isCorrect": false,
+                  "order": 1
+                },
+                {
+                  "text": "4",
+                  "isCorrect": true,
+                  "order": 2
+                }
+              ]
+            }
+          ]
+        }
+        ```
+        
+        ### Exam Attempts
+        
+        #### Start Exam Attempt
+        ```http
+        POST /api/examattempts/start
+        Content-Type: application/json
+        
+        {
+          "examId": 1
+        }
+        ```
+        
+        #### Submit Answer
+        ```http
+        POST /api/examattempts/{attemptId}/answer
+        Content-Type: application/json
+        
+        {
+          "questionId": 1,
+          "selectedOptionId": 2
+        }
+        ```
+        
+        #### Complete Exam
+        ```http
+        POST /api/examattempts/{attemptId}/complete
+        ```
+        
+        ## Error Responses
+        
+        ### 400 Bad Request
+        ```json
+        {
+          "error": "Invalid request data",
+          "details": "Specific validation errors"
+        }
+        ```
+        
+        ### 404 Not Found
+        ```json
+        {
+          "error": "Resource not found"
+        }
+        ```
+        
+        ### 500 Internal Server Error
+        ```json
+        {
+          "error": "Internal server error"
+        }
+        ```
+        EOF
+
+        # Create deployment guide
+        cat > docs/_site/deployment.md << 'EOF'
+        # Deployment Guide
+        
+        ## Prerequisites
+        
+        - Azure subscription
+        - Azure CLI installed
+        - Terraform installed
+        - Git repository access
+        
+        ## Infrastructure Deployment
+        
+        ### 1. Configure Azure CLI
+        ```bash
+        az login
+        az account set --subscription "your-subscription-id"
+        ```
+        
+        ### 2. Configure Terraform Variables
+        ```bash
+        cd infrastructure
+        cp terraform.tfvars.example terraform.tfvars
+        # Edit terraform.tfvars with your values
+        ```
+        
+        ### 3. Deploy Infrastructure
+        ```bash
+        terraform init
+        terraform plan
+        terraform apply
+        ```
+        
+        ### 4. Get Deployment Outputs
+        ```bash
+        terraform output
+        ```
+        
+        ## Application Deployment
+        
+        ### Backend Deployment
+        
+        1. **Build the application:**
+           ```bash
+           cd backend/ExamSystem.API
+           dotnet publish -c Release -o ./publish
+           ```
+        
+        2. **Deploy to Azure App Service:**
+           ```bash
+           az webapp deployment source config-zip \
+             --resource-group rg-exam-system-dev \
+             --name app-exam-backend-dev \
+             --src ./publish.zip
+           ```
+        
+        3. **Configure connection string:**
+           ```bash
+           az webapp config connection-string set \
+             --resource-group rg-exam-system-dev \
+             --name app-exam-backend-dev \
+             --connection-string-type SQLServer \
+             --settings DefaultConnection="your-connection-string"
+           ```
+        
+        ### Frontend Deployment
+        
+        1. **Build the application:**
+           ```bash
+           cd frontend/exam-system-frontend
+           npm install
+           npm run build
+           ```
+        
+        2. **Deploy to Azure App Service:**
+           ```bash
+           az webapp deployment source config-zip \
+             --resource-group rg-exam-system-dev \
+             --name app-exam-frontend-dev \
+             --src ./build.zip
+           ```
+        
+        3. **Configure environment variables:**
+           ```bash
+           az webapp config appsettings set \
+             --resource-group rg-exam-system-dev \
+             --name app-exam-frontend-dev \
+             --settings REACT_APP_API_URL="https://your-backend-url/api"
+           ```
+        
+        ## Database Setup
+        
+        ### 1. Run Entity Framework Migrations
+        ```bash
+        cd backend/ExamSystem.API
+        dotnet ef database update
+        ```
+        
+        ### 2. Seed Initial Data
+        The application includes seed data for development:
+        - Admin user (admin@examsystem.com)
+        - Student user (john.student@examsystem.com)
+        
+        ## Monitoring Setup
+        
+        ### 1. Enable Application Insights
+        ```bash
+        az monitor app-insights component create \
+           --resource-group rg-exam-system-dev \
+           --app exam-system-insights \
+           --location eastus
+        ```
+        
+        ### 2. Configure Alerts
+        - Set up alerts for application errors
+        - Monitor database performance
+        - Track user activity
+        
+        ## Security Configuration
+        
+        ### 1. Configure CORS
+        Update CORS settings in the backend to allow frontend domain.
+        
+        ### 2. Database Security
+        - Enable firewall rules for Azure services
+        - Use managed identity for authentication
+        - Enable SSL/TLS encryption
+        
+        ### 3. Application Security
+        - Implement JWT authentication
+        - Add input validation
+        - Enable HTTPS only
+        
+        ## Troubleshooting
+        
+        ### Common Issues
+        
+        1. **Database Connection Issues**
+           - Verify connection string
+           - Check firewall rules
+           - Ensure SQL Server is running
+        
+        2. **CORS Issues**
+           - Update CORS configuration
+           - Verify frontend URL
+        
+        3. **Build Failures**
+           - Check Node.js version
+           - Verify .NET SDK version
+           - Review build logs
+        
+        ### Logs and Monitoring
+        
+        ```bash
+        # View application logs
+        az webapp log tail --resource-group rg-exam-system-dev --name app-exam-backend-dev
+        
+        # View deployment logs
+        az webapp deployment log list --resource-group rg-exam-system-dev --name app-exam-backend-dev
+        ```
+        
+        ## Maintenance
+        
+        ### Regular Tasks
+        - Update dependencies
+        - Monitor performance
+        - Backup database
+        - Review security logs
+        
+        ### Scaling
+        - Scale App Service Plan
+        - Scale SQL Database
+        - Add load balancing
+        EOF
+
+        # Create architecture documentation
+        cat > docs/_site/architecture.md << 'EOF'
+        # System Architecture
+        
+        ## Overview
+        
+        The Exam System is built using a modern, cloud-native architecture with clear separation of concerns and scalability in mind.
+        
+        ## High-Level Architecture
+        
+        ```mermaid
+        graph TB
+            subgraph "Client Layer"
+                A[Web Browser]
+                B[Mobile App]
+            end
+            
+            subgraph "Frontend Layer"
+                C[React SPA]
+                D[Material-UI Components]
+            end
+            
+            subgraph "API Gateway"
+                E[Azure App Service]
+            end
+            
+            subgraph "Backend Layer"
+                F[.NET Core API]
+                G[Business Logic]
+                H[Data Access Layer]
+            end
+            
+            subgraph "Data Layer"
+                I[SQL Server]
+                J[Azure Storage]
+            end
+            
+            subgraph "Infrastructure"
+                K[Azure App Service]
+                L[Azure SQL Database]
+                M[Azure Storage Account]
+                N[Azure Container Registry]
+            end
+            
+            A --> C
+            B --> C
+            C --> E
+            E --> F
+            F --> G
+            G --> H
+            H --> I
+            F --> J
+            E --> K
+            I --> L
+            J --> M
+        ```
+        
+        ## Component Details
+        
+        ### Frontend (React)
+        - **Framework**: React 18 with TypeScript
+        - **UI Library**: Material-UI for consistent design
+        - **State Management**: React hooks and context
+        - **Routing**: React Router for navigation
+        - **HTTP Client**: Axios for API communication
+        
+        ### Backend (.NET Core)
+        - **Framework**: ASP.NET Core 9.0
+        - **ORM**: Entity Framework Core
+        - **API**: RESTful Web API
+        - **Documentation**: Swagger/OpenAPI
+        - **Testing**: xUnit for unit tests
+        
+        ### Database (SQL Server)
+        - **Engine**: Azure SQL Database
+        - **ORM**: Entity Framework Core
+        - **Migrations**: Code-first approach
+        - **Backup**: Automated daily backups
+        
+        ### Infrastructure (Azure)
+        - **Compute**: Azure App Service
+        - **Database**: Azure SQL Database
+        - **Storage**: Azure Storage Account
+        - **Registry**: Azure Container Registry
+        - **Monitoring**: Azure Application Insights
+        
+        ## Data Flow
+        
+        ### Student Exam Flow
+        1. Student logs into the system
+        2. Views available exams
+        3. Starts an exam attempt
+        4. Answers questions with timer
+        5. Submits answers
+        6. Views results
+        
+        ### Teacher Management Flow
+        1. Teacher creates exam
+        2. Adds questions and options
+        3. Sets time limits and availability
+        4. Publishes exam
+        5. Monitors student attempts
+        6. Reviews results and analytics
+        
+        ## Security Architecture
+        
+        ### Authentication & Authorization
+        - JWT tokens for API authentication
+        - Role-based access control
+        - Session management
+        
+        ### Data Security
+        - Encryption at rest and in transit
+        - SQL injection prevention
+        - Input validation and sanitization
+        - CORS configuration
+        
+        ### Network Security
+        - HTTPS enforcement
+        - Network security groups
+        - Private endpoints for database
+        
+        ## Scalability Considerations
+        
+        ### Horizontal Scaling
+        - Stateless backend design
+        - Load balancing capabilities
+        - Auto-scaling based on metrics
+        
+        ### Vertical Scaling
+        - Database performance tiers
+        - App Service plan upgrades
+        - Storage capacity scaling
+        
+        ### Caching Strategy
+        - Redis for session storage
+        - CDN for static assets
+        - Database query optimization
+        
+        ## Monitoring and Observability
+        
+        ### Application Monitoring
+        - Azure Application Insights
+        - Custom metrics and events
+        - Performance counters
+        
+        ### Infrastructure Monitoring
+        - Azure Monitor
+        - Resource health checks
+        - Cost monitoring
+        
+        ### Logging Strategy
+        - Structured logging with Serilog
+        - Log aggregation and analysis
+        - Error tracking and alerting
+        
+        ## Disaster Recovery
+        
+        ### Backup Strategy
+        - Daily database backups
+        - Infrastructure as Code
+        - Source code versioning
+        
+        ### Recovery Procedures
+        - Point-in-time database recovery
+        - Infrastructure recreation
+        - Application redeployment
+        
+        ## Performance Optimization
+        
+        ### Database Optimization
+        - Index optimization
+        - Query performance tuning
+        - Connection pooling
+        
+        ### Application Optimization
+        - Code optimization
+        - Caching strategies
+        - Resource utilization
+        
+        ### Frontend Optimization
+        - Bundle optimization
+        - Lazy loading
+        - CDN utilization
+        EOF
+
+        # Create main index file
+        cat > docs/_site/README.md << 'EOF'
+        # Sistema de Exámenes en Línea - Documentación
+        
+        Bienvenido a la documentación completa del Sistema de Exámenes en Línea.
+        
+        ## 📚 Índice de Documentación
+        
+        - [Arquitectura del Sistema](./architecture.md)
+        - [Guía de Despliegue](./deployment.md)
+        - [Documentación de API](./api.md)
+        - [Guía de Contribución](./contributing.md)
+        
+        ## 🚀 Inicio Rápido
+        
+        ### Requisitos Previos
+        - .NET 9.0 SDK
+        - Node.js 18+
+        - SQL Server
+        - Azure CLI
+        - Terraform
+        
+        ### Instalación
+        
+        1. **Clonar el repositorio:**
+           ```bash
+           git clone https://github.com/UPT-FAING-EPIS/examen-2025-ii-pds-u1-BCZLopezCatunta.git
+           cd examen-2025-ii-pds-u1-BCZLopezCatunta
+           ```
+        
+        2. **Configurar el backend:**
+           ```bash
+           cd backend/ExamSystem.API
+           dotnet restore
+           dotnet run
+           ```
+        
+        3. **Configurar el frontend:**
+           ```bash
+           cd frontend/exam-system-frontend
+           npm install
+           npm start
+           ```
+        
+        4. **Desplegar infraestructura:**
+           ```bash
+           cd infrastructure
+           terraform init
+           terraform apply
+           ```
+        
+        ## 🏗️ Arquitectura
+        
+        El sistema está construido con una arquitectura moderna y escalable:
+        
+        - **Frontend**: React 18 + TypeScript + Material-UI
+        - **Backend**: .NET Core 9.0 + Entity Framework
+        - **Base de Datos**: SQL Server
+        - **Infraestructura**: Azure + Terraform
+        - **CI/CD**: GitHub Actions
+        
+        ## 🔧 Características
+        
+        ### Panel de Estudiante
+        - Rendir exámenes con temporizador
+        - Múltiples tipos de preguntas
+        - Resultados instantáneos
+        - Historial de intentos
+        
+        ### Panel de Docente
+        - Crear y gestionar exámenes
+        - Analizar resultados
+        - Estadísticas de rendimiento
+        - Gestión de usuarios
+        
+        ## 📊 Monitoreo
+        
+        - Azure Application Insights
+        - Métricas de rendimiento
+        - Alertas automáticas
+        - Logs estructurados
+        
+        ## 🔒 Seguridad
+        
+        - Autenticación JWT
+        - Validación de entrada
+        - Prevención de inyección SQL
+        - CORS configurado
+        
+        ## 📈 Escalabilidad
+        
+        - Arquitectura stateless
+        - Auto-scaling
+        - Caching inteligente
+        - Optimización de consultas
+        
+        ## 🤝 Contribución
+        
+        Para contribuir al proyecto:
+        
+        1. Fork del repositorio
+        2. Crear rama de feature
+        3. Realizar cambios
+        4. Ejecutar pruebas
+        5. Crear Pull Request
+        
+        ## 📄 Licencia
+        
+        Este proyecto está bajo la Licencia MIT.
+        
+        ## 📞 Soporte
+        
+        Para soporte técnico o preguntas:
+        - Crear un issue en GitHub
+        - Contactar al equipo de desarrollo
+        - Revisar la documentación
+        
+        ---
+        
+        **Última actualización**: $(date)
+        **Versión**: 1.0.0
+        EOF
+
+    - name: Build Documentation Site
+      run: |
+        # Create a simple HTML site
+        cat > docs/_site/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Sistema de Exámenes en Línea - Documentación</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+                .container { max-width: 1200px; margin: 0 auto; }
+                h1, h2, h3 { color: #333; }
+                .nav { background: #f4f4f4; padding: 20px; border-radius: 5px; margin-bottom: 30px; }
+                .nav a { margin-right: 20px; text-decoration: none; color: #007bff; }
+                .nav a:hover { text-decoration: underline; }
+                .content { background: white; padding: 30px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+                code { background: #f8f9fa; padding: 2px 4px; border-radius: 3px; }
+                pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="nav">
+                    <a href="#overview">Resumen</a>
+                    <a href="#architecture">Arquitectura</a>
+                    <a href="#deployment">Despliegue</a>
+                    <a href="#api">API</a>
+                    <a href="#contributing">Contribución</a>
+                </div>
+                
+                <div class="content">
+                    <h1>Sistema de Exámenes en Línea</h1>
+                    
+                    <h2 id="overview">Resumen del Proyecto</h2>
+                    <p>El Sistema de Exámenes en Línea es una aplicación web completa desarrollada con tecnologías modernas para la gestión y realización de exámenes académicos.</p>
+                    
+                    <h3>Características Principales</h3>
+                    <ul>
+                        <li><strong>Panel de Estudiante</strong>: Interfaz para rendir exámenes con temporizador automático</li>
+                        <li><strong>Panel de Docente</strong>: Herramientas para crear, gestionar y analizar exámenes</li>
+                        <li><strong>API REST</strong>: Backend robusto con .NET Core y Entity Framework</li>
+                        <li><strong>Base de Datos</strong>: SQL Server con diseño relacional optimizado</li>
+                        <li><strong>Frontend Moderno</strong>: React con TypeScript y Material-UI</li>
+                        <li><strong>Infraestructura</strong>: Desplegada en Azure con Terraform</li>
+                        <li><strong>CI/CD</strong>: Automatización completa con GitHub Actions</li>
+                    </ul>
+                    
+                    <h2 id="architecture">Arquitectura del Sistema</h2>
+                    <p>El sistema sigue una arquitectura de microservicios con separación clara de responsabilidades:</p>
+                    
+                    <h3>Frontend (React)</h3>
+                    <ul>
+                        <li>React 18 con TypeScript para tipado estático</li>
+                        <li>Material-UI para componentes de interfaz</li>
+                        <li>React Router para navegación</li>
+                        <li>Axios para comunicación con la API</li>
+                    </ul>
+                    
+                    <h3>Backend (.NET Core)</h3>
+                    <ul>
+                        <li>ASP.NET Core 9.0 Web API</li>
+                        <li>Entity Framework Core para acceso a datos</li>
+                        <li>Swagger/OpenAPI para documentación</li>
+                        <li>Pruebas unitarias con xUnit</li>
+                    </ul>
+                    
+                    <h3>Base de Datos</h3>
+                    <ul>
+                        <li>SQL Server con Azure SQL Database</li>
+                        <li>Diseño relacional normalizado</li>
+                        <li>Índices optimizados para rendimiento</li>
+                        <li>Backups automáticos</li>
+                    </ul>
+                    
+                    <h2 id="deployment">Guía de Despliegue</h2>
+                    <p>El sistema se despliega completamente en Azure usando Terraform para la infraestructura como código.</p>
+                    
+                    <h3>Requisitos Previos</h3>
+                    <ul>
+                        <li>Cuenta de Azure con permisos de administrador</li>
+                        <li>Azure CLI instalado y configurado</li>
+                        <li>Terraform 1.0+ instalado</li>
+                        <li>Git para clonar el repositorio</li>
+                    </ul>
+                    
+                    <h3>Pasos de Despliegue</h3>
+                    <ol>
+                        <li>Clonar el repositorio</li>
+                        <li>Configurar variables de Terraform</li>
+                        <li>Desplegar infraestructura</li>
+                        <li>Configurar aplicaciones</li>
+                        <li>Ejecutar migraciones de base de datos</li>
+                    </ol>
+                    
+                    <h2 id="api">Documentación de API</h2>
+                    <p>La API REST proporciona endpoints para todas las operaciones del sistema:</p>
+                    
+                    <h3>Endpoints Principales</h3>
+                    <ul>
+                        <li><code>GET /api/exams</code> - Obtener todos los exámenes</li>
+                        <li><code>POST /api/exams</code> - Crear nuevo examen</li>
+                        <li><code>POST /api/examattempts/start</code> - Iniciar intento de examen</li>
+                        <li><code>POST /api/examattempts/{id}/answer</code> - Enviar respuesta</li>
+                        <li><code>POST /api/examattempts/{id}/complete</code> - Finalizar examen</li>
+                    </ul>
+                    
+                    <h2 id="contributing">Guía de Contribución</h2>
+                    <p>Para contribuir al proyecto:</p>
+                    <ol>
+                        <li>Fork del repositorio</li>
+                        <li>Crear rama de feature</li>
+                        <li>Realizar cambios con pruebas</li>
+                        <li>Crear Pull Request</li>
+                    </ol>
+                    
+                    <h3>Estándares de Código</h3>
+                    <ul>
+                        <li>Código limpio y documentado</li>
+                        <li>Pruebas unitarias para nueva funcionalidad</li>
+                        <li>Commits descriptivos</li>
+                        <li>Revisión de código obligatoria</li>
+                    </ul>
+                    
+                    <hr>
+                    <p><em>Documentación generada automáticamente por GitHub Actions</em></p>
+                </div>
+            </div>
+        </body>
+        </html>
+        EOF
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs/_site
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

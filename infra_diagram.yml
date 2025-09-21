@@ -1,0 +1,288 @@
+name: Generate Infrastructure Diagram
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'infrastructure/**' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'infrastructure/**' ]
+  workflow_dispatch:
+
+jobs:
+  generate-diagram:
+    name: Generate Infrastructure Diagram
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+
+    - name: Terraform Init
+      run: terraform init
+      working-directory: ./infrastructure
+
+    - name: Install Terraform Diagram Generator
+      run: |
+        wget https://github.com/pulumi/terraform2pulumi/releases/latest/download/terraform2pulumi-linux-amd64.tar.gz
+        tar -xzf terraform2pulumi-linux-amd64.tar.gz
+        sudo mv terraform2pulumi /usr/local/bin/
+        chmod +x /usr/local/bin/terraform2pulumi
+
+    - name: Generate Infrastructure Diagram
+      run: |
+        # Create diagram using Mermaid
+        cat > infrastructure-diagram.md << 'EOF'
+        # Infrastructure Diagram
+        
+        ```mermaid
+        graph TB
+            subgraph "Azure Cloud"
+                subgraph "Resource Group"
+                    RG[Resource Group]
+                    
+                    subgraph "Networking"
+                        VNet[Virtual Network]
+                        Subnet[Subnet]
+                        NSG[Network Security Group]
+                        PIP[Public IP]
+                    end
+                    
+                    subgraph "Compute"
+                        VM[Virtual Machine]
+                        ASP[App Service Plan]
+                        BackendApp[Backend Web App]
+                        FrontendApp[Frontend Web App]
+                    end
+                    
+                    subgraph "Database"
+                        SQLServer[SQL Server]
+                        SQLDB[SQL Database]
+                    end
+                    
+                    subgraph "Storage"
+                        SA[Storage Account]
+                        ACR[Container Registry]
+                    end
+                end
+            end
+            
+            subgraph "External"
+                Users[Users]
+                Internet[Internet]
+            end
+            
+            Users --> Internet
+            Internet --> PIP
+            PIP --> VM
+            Internet --> BackendApp
+            Internet --> FrontendApp
+            BackendApp --> SQLServer
+            SQLServer --> SQLDB
+            BackendApp --> SA
+            FrontendApp --> BackendApp
+            VM --> VNet
+            BackendApp --> VNet
+            FrontendApp --> VNet
+            SQLServer --> VNet
+        ```
+        
+        ## Architecture Components
+        
+        ### Networking
+        - **Virtual Network**: Provides isolated network environment
+        - **Subnet**: Segments network traffic
+        - **Network Security Group**: Controls inbound/outbound traffic
+        - **Public IP**: Enables external access
+        
+        ### Compute
+        - **Virtual Machine**: Linux VM for development and services
+        - **App Service Plan**: Shared hosting plan for web applications
+        - **Backend Web App**: .NET Core API application
+        - **Frontend Web App**: React application
+        
+        ### Database
+        - **SQL Server**: Managed database server
+        - **SQL Database**: Application database
+        
+        ### Storage
+        - **Storage Account**: File storage and backups
+        - **Container Registry**: Docker image storage
+        
+        ## Security Features
+        
+        - Network Security Groups with restricted access
+        - SQL Server firewall rules
+        - HTTPS encryption for web applications
+        - Managed identity for secure authentication
+        
+        ## Scalability
+        
+        - App Service Plan allows horizontal scaling
+        - SQL Database can be scaled up/down
+        - Storage Account provides unlimited capacity
+        - Container Registry supports multiple environments
+        EOF
+
+    - name: Create Architecture Documentation
+      run: |
+        cat > architecture-overview.md << 'EOF'
+        # Exam System Infrastructure Architecture
+        
+        ## Overview
+        This document describes the infrastructure architecture for the Exam System application deployed on Microsoft Azure.
+        
+        ## Components
+        
+        ### 1. Resource Group
+        - **Purpose**: Organizes all related resources
+        - **Naming**: `rg-exam-system-{environment}`
+        
+        ### 2. Networking Layer
+        - **Virtual Network**: `vnet-exam-system-{environment}`
+          - Address space: 10.0.0.0/16
+        - **Subnet**: `subnet-exam-system-{environment}`
+          - Address space: 10.0.1.0/24
+        - **Network Security Group**: Controls traffic flow
+        - **Public IP**: Static IP for external access
+        
+        ### 3. Compute Layer
+        - **Virtual Machine**: Linux VM for development
+          - Size: Standard_B2s (2 vCPUs, 4 GB RAM)
+          - OS: Ubuntu 20.04 LTS
+        - **App Service Plan**: Shared hosting plan
+          - SKU: B1 (1 vCPU, 1.75 GB RAM)
+        - **Web Applications**:
+          - Backend: .NET Core API
+          - Frontend: React SPA
+        
+        ### 4. Database Layer
+        - **SQL Server**: Managed database server
+          - Version: 12.0
+          - Authentication: SQL Authentication
+        - **SQL Database**: Application database
+          - SKU: Basic (5 DTUs, 2 GB)
+          - Collation: SQL_Latin1_General_CP1_CI_AS
+        
+        ### 5. Storage Layer
+        - **Storage Account**: File storage
+          - Type: Standard LRS
+        - **Container Registry**: Docker images
+          - SKU: Basic
+        
+        ## Security Considerations
+        
+        ### Network Security
+        - NSG rules restrict access to specific ports
+        - Subnet isolation for database tier
+        - Public IP only for necessary services
+        
+        ### Database Security
+        - SQL Server firewall rules
+        - Encrypted connections (TLS 1.2)
+        - Strong authentication credentials
+        
+        ### Application Security
+        - HTTPS enforcement
+        - CORS configuration
+        - Environment-specific configurations
+        
+        ## Monitoring and Logging
+        
+        ### Azure Monitor
+        - Resource health monitoring
+        - Performance metrics
+        - Alert rules for critical issues
+        
+        ### Application Insights
+        - Application performance monitoring
+        - Error tracking
+        - User analytics
+        
+        ## Backup and Recovery
+        
+        ### Database Backups
+        - Automated daily backups
+        - Point-in-time recovery
+        - Geo-redundant storage option
+        
+        ### Application Backups
+        - Source code in Git repository
+        - Infrastructure as Code in Terraform
+        - Container images in registry
+        
+        ## Cost Optimization
+        
+        ### Development Environment
+        - Basic SKUs for cost efficiency
+        - Shared App Service Plan
+        - Standard storage for non-critical data
+        
+        ### Production Considerations
+        - Upgrade to Standard/Premium SKUs
+        - Multiple availability zones
+        - Auto-scaling configuration
+        
+        ## Deployment Process
+        
+        1. **Infrastructure**: Terraform applies infrastructure
+        2. **Backend**: Deploy .NET Core API to App Service
+        3. **Frontend**: Deploy React app to App Service
+        4. **Database**: Run Entity Framework migrations
+        5. **Configuration**: Set environment variables
+        6. **Testing**: Run integration tests
+        7. **Monitoring**: Configure alerts and dashboards
+        
+        ## Maintenance
+        
+        ### Regular Tasks
+        - Security updates for VMs
+        - Database maintenance
+        - Log rotation and cleanup
+        - Performance monitoring
+        
+        ### Scaling
+        - Horizontal scaling for web apps
+        - Vertical scaling for database
+        - Load balancing for high availability
+        
+        ## Disaster Recovery
+        
+        ### Backup Strategy
+        - Daily database backups
+        - Infrastructure as Code
+        - Source code versioning
+        
+        ### Recovery Procedures
+        - Infrastructure recreation from Terraform
+        - Database restore from backups
+        - Application redeployment
+        EOF
+
+    - name: Upload Diagrams
+      uses: actions/upload-artifact@v4
+      with:
+        name: infrastructure-diagrams
+        path: |
+          infrastructure-diagram.md
+          architecture-overview.md
+
+    - name: Comment PR with Diagram
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const diagram = fs.readFileSync('infrastructure-diagram.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## Infrastructure Diagram\n\n${diagram}`
+          });

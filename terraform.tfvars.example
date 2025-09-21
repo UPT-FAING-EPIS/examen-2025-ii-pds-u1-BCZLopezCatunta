@@ -1,0 +1,16 @@
+# Copy this file to terraform.tfvars and fill in your values
+
+# Environment configuration
+environment = "dev"
+location     = "East US"
+
+# Virtual Machine configuration
+vm_size        = "Standard_B2s"
+admin_username = "azureuser"
+
+# SSH Public Key (generate with: ssh-keygen -t rsa -b 4096 -C "your_email@example.com")
+ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ... your_email@example.com"
+
+# SQL Server configuration
+sql_admin_username = "sqladmin"
+sql_admin_password = "YourSecurePassword123!"
